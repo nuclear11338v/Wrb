@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KIRA AI - Telegram Bot Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a3d, #2e3b6e);
+            color: #fff;
+            padding: 20px;
+            transition: background 0.5s ease;
+        }
+
+        body.dark-theme {
+            background: linear-gradient(135deg, #0d0d0d, #1c2526);
+        }
+
+        #chat-container {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-theme #chat-container {
+            background: rgba(30, 30, 30, 0.9);
+        }
+
+        #chat-header {
+            background: linear-gradient(90deg, #6a11cb, #2575fc);
+            padding: 20px;
+            text-align: center;
+            font-size: 2em;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+        }
+
+        #theme-toggle, #logout-button, #history-button {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #theme-toggle:hover, #logout-button:hover, #history-button:hover {
+            transform: scale(1.2);
+        }
+
+        #telegram-logo {
+            width: 40px;
+            height: 40px;
+            transition: transform 0.3s ease;
+        }
+
+        #telegram-logo:hover {
+            transform: rotate(360deg);
+        }
+
+        #chat-output {
+            flex: 1;
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            background: transparent;
+            transition: all 0.3s ease;
+        }
+
+        #chat-output::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        #chat-output::-webkit-scrollbar-thumb {
+            background: #6a11cb;
+            border-radius: 10px;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            padding: 12px 18px;
+            border-radius: 15px;
+            max-width: 80%;
+            font-size: 1.1em;
+            position: relative;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .user-message {
+            background: #6a11cb;
+            color: #fff;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        body.dark-theme .user-message {
+            background: #2575fc;
+        }
+
+        .bot-message {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            margin-right: auto;
+        }
+
+        body.dark-theme .bot-message {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .bot-message strong {
+            color: #ff6f61;
+        }
+
+        .timestamp {
+            font-size: 0.8em;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 5px;
+            display: block;
+        }
+
+        .reactions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            align-items: center;
+        }
+
+        .reaction {
+            cursor: pointer;
+            font-size: 1.2em;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .reaction:hover {
+            transform: scale(1.3);
+        }
+
+        .reaction.selected {
+            background: #ff6f61;
+            transform: scale(1.1);
+        }
+
+        .reaction-count {
+            font-size: 0.9em;
+            margin-left: 4px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .feedback-message {
+            font-size: 0.8em;
+            color: #ff6f61;
+            margin-top: 5px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .edit-button {
+            font-size: 0.8em;
+            color: #ff6f61;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: color 0.2s;
+        }
+
+        .edit-button:hover {
+            color: #fff;
+        }
+
+        #input-container {
+            display: flex;
+            padding: 20px;
+            background: transparent;
+            position: relative;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.1em;
+            outline: none;
+            margin-right: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+
+        #user-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        #user-input:focus {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        #send-button {
+            padding: 15px 25px;
+            background: linear-gradient(90deg, #6a11cb, #2575fc);
+            color: #fff;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        #send-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        #typing-indicator {
+            display: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-style: italic;
+            margin-bottom: 15px;
+            font-size: 1em;
+        }
+
+        #autocomplete-suggestions {
+            position: absolute;
+            bottom: 70px;
+            left: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
+            z-index: 10;
+        }
+
+        .suggestion {
+            padding: 12px;
+            cursor: pointer;
+            font-size: 1em;
+            color: #fff;
+            transition: background 0.2s;
+        }
+
+        .suggestion:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        #auth-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #auth-form {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            width: 90%;
+            max-width: 350px;
+            color: #fff;
+        }
+
+        #auth-form input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        #auth-form input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        #auth-form button {
+            padding: 12px 25px;
+            background: #6a11cb;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+            margin: 5px;
+        }
+
+        #auth-form button:hover {
+            background: #2575fc;
+        }
+
+        #toggle-auth {
+            cursor: pointer;
+            color: #ff6f61;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        #history-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #history-form {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            width: 90%;
+            max-width: 350px;
+            color: #fff;
+        }
+
+        .history-button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: #6a11cb;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+
+        .history-button:hover {
+            background: #2575fc;
+        }
+
+        #close-history {
+            padding: 12px 25px;
+            background: #ff6f61;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 10px;
+        }
+
+        #close-history:hover {
+            background: #e55a50;
+        }
+
+        #footer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9em;
+            margin-top: 20px;
+        }
+
+        /* Code block styling */
+        .code-block {
+            position: relative;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95em;
+            color: #f8f8f2;
+            overflow-x: auto;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .code-block pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
+        .code-block .language-label {
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            background: #6a11cb;
+            color: #fff;
+            padding: 2px 8px;
+            font-size: 0.8em;
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body.dark-theme .code-block {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        body.dark-theme .code-block .language-label {
+            background: #2575fc;
+        }
+
+        .code-block::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .code-block::-webkit-scrollbar-thumb {
+            background: #6a11cb;
+            border-radius: 4px;
+        }
+
+        body.dark-theme .code-block::-webkit-scrollbar-thumb {
+            background: #2575fc;
+        }
+
+        /* Inline code styling */
+        .inline-code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95em;
+            color: #f8f8f2;
+        }
+
+        body.dark-theme .inline-code {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        @media (max-width: 600px) {
+            #chat-container {
+                max-width: 100%;
+                border-radius: 15px;
+            }
+
+            #chat-header {
+                font-size: 1.5em;
+                padding: 15px;
+            }
+
+            #telegram-logo {
+                width: 30px;
+                height: 30px;
+            }
+
+            #theme-toggle, #logout-button, #history-button {
+                font-size: 1.1em;
+            }
+
+            #chat-output {
+                height: 400px;
+                padding: 15px;
+            }
+
+            .message {
+                font-size: 1em;
+                padding: 10px 15px;
+            }
+
+            #user-input {
+                font-size: 1em;
+                padding: 12px;
+            }
+
+            #send-button {
+                padding: 12px 20px;
+                font-size: 1em;
+            }
+
+            #auth-form, #history-form {
+                padding: 20px;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="auth-container">
+        <div id="auth-form">
+            <h2 id="auth-title">Login to KIRA AI</h2>
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button onclick="authAction()">Login</button>
+            <div id="toggle-auth" onclick="toggleAuthForm()">Don't have an account? Sign Up</div>
+        </div>
+    </div>
+    <div id="history-container">
+        <div id="history-form">
+            <h2>Conversation History</h2>
+            <div id="history-buttons"></div>
+            <button id="close-history" onclick="closeHistory()">Close</button>
+        </div>
+    </div>
+    <div id="chat-container">
+        <div id="chat-header">
+            KIRA AI - @MrsKiraBot Assistant
+            <div>
+                <button id="history-button" onclick="showHistory()">📜</button>
+                <button id="theme-toggle" onclick="toggleTheme()">🌙</button>
+                <button id="logout-button" onclick="logout()">🚪</button>
+                <a href="https://t.me/KiraChatGroup" target="_blank">
+                    <img id="telegram-logo" src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Telegram Logo">
+                </a>
+            </div>
+        </div>
+        <div id="chat-output">
+            <div class="message bot-message">
+                <span><strong>KIRA AI:</strong> Wᴇʟcoмᴇ! I'м Kιʀᴀ Aι, @MrsKiraBot Assιsтᴀɴт<br>Asκ Aʙouт Coммᴀɴᴅs Lικᴇ<br>
+                    <div class="code-block">
+                        <span class="language-label">commands</span>
+                        <pre><code>𝐡𝐨𝐰 𝐭𝐨 𝐛𝐚𝐧 𝐮𝐬𝐞𝐫<br>𝐡𝐨𝐰 𝐭𝐨 𝐦𝐮𝐭𝐞 𝐮𝐬𝐞𝐫<br>𝐡𝐨𝐰 𝐭𝐨 𝐩𝐫𝐨𝐦𝐨𝐭𝐞 𝐮𝐬𝐞𝐫 𝐞𝐭𝐜.</code></pre>
+                    </div>
+                </span>
+                <span class="timestamp"></span>
+                <div class="reactions">
+                    <span class="reaction" onclick="addReaction(this.parentElement.parentElement, '👍')" data-emoji="👍">👍</span>
+                    <span class="reaction" onclick="addReaction(this.parentElement.parentElement, '👎')" data-emoji="👎">👎</span>
+                </div>
+            </div>
+        </div>
+        <div id="typing-indicator">KIRA AI is typing...</div>
+        <div id="input-container">
+            <input type="text" id="user-input" placeholder="Asκ Mᴇ :) Aʙouт @мʀsκιʀᴀʙoт" autofocus oninput="showAutocomplete()">
+            <button id="send-button" onclick="sendMessage()">Send</button>
+        </div>
+        <div id="autocomplete-suggestions"></div>
+    </div>
+    <div id="footer">© 2025 TEAM X OG</div>
+
+    <script>
+        let isAuthenticated = false;
+        let currentUser = null;
+        let isLogin = true;
+        const userReactions = new Map();
+        let currentSessionId = null;
+
+        function showAuthForm() {
+            document.getElementById("auth-container").style.display = "flex";
+            document.getElementById("chat-container").style.display = "none";
+            document.getElementById("history-container").style.display = "none";
+        }
+
+        function toggleAuthForm() {
+            isLogin = !isLogin;
+            document.getElementById("auth-title").textContent = isLogin ? "Login to KIRA AI" : "Sign Up to KIRA AI";
+            document.getElementById("auth-form").querySelector("button").textContent = isLogin ? "Login" : "Sign Up";
+            document.getElementById("toggle-auth").textContent = isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login";
+        }
+
+        function authAction() {
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value;
+            let users = JSON.parse(localStorage.getItem("users")) || {};
+
+            if (!username || !password) {
+                alert("Please enter username and password.");
+                return;
+            }
+
+            if (isLogin) {
+                // Login
+                if (users[username] && users[username].password === password) {
+                    isAuthenticated = true;
+                    currentUser = username;
+                    localStorage.setItem("currentUser", username);
+                    document.getElementById("auth-container").style.display = "none";
+                    document.getElementById("chat-container").style.display = "flex";
+                    initializeChat();
+                } else {
+                    alert("Invalid username or password.");
+                }
+            } else {
+                // Signup
+                if (users[username]) {
+                    alert("Username already exists.");
+                } else {
+                    users[username] = { password, sessions: [] };
+                    localStorage.setItem("users", JSON.stringify(users));
+                    alert("Sign up successful! Please login.");
+                    toggleAuthForm();
+                }
+            }
+        }
+
+        function logout() {
+            saveCurrentSession();
+            isAuthenticated = false;
+            currentUser = null;
+            currentSessionId = null;
+            userReactions.clear();
+            localStorage.removeItem("currentUser");
+            document.getElementById("chat-output").innerHTML = "";
+            showAuthForm();
+        }
+
+        function showHistory() {
+            if (!isAuthenticated) {
+                alert("Please login to view history.");
+                return;
+            }
+            saveCurrentSession();
+            document.getElementById("history-container").style.display = "flex";
+            document.getElementById("chat-container").style.display = "none";
+            loadHistoryButtons();
+        }
+
+        function closeHistory() {
+            document.getElementById("history-container").style.display = "none";
+            document.getElementById("chat-container").style.display = "flex";
+        }
+
+        function saveCurrentSession() {
+            if (!currentUser || !currentSessionId) return;
+            const users = JSON.parse(localStorage.getItem("users")) || {};
+            const messages = Array.from(document.getElementById("chat-output").children).map(message => ({
+                class: message.className,
+                html: message.innerHTML
+            }));
+            const session = users[currentUser].sessions.find(s => s.id === currentSessionId);
+            if (session) {
+                session.messages = messages;
+                session.timestamp = new Date().toLocaleString();
+                session.preview = messages.length > 0 ? messages[0].html.split("<br>")[0].substring(0, 30) + "..." : "Empty session";
+            } else {
+                users[currentUser].sessions.push({
+                    id: currentSessionId,
+                    timestamp: new Date().toLocaleString(),
+                    preview: messages.length > 0 ? messages[0].html.split("<br>")[0].substring(0, 30) + "...": "Empty session",
+                    messages
+                });
+                if (users[currentUser].sessions.length > 3) {
+                    users[currentUser].sessions.shift(); // Keep only 3 sessions
+                }
+            }
+            localStorage.setItem("users", JSON.stringify(users));
+        }
+
+        function loadHistoryButtons() {
+            const users = JSON.parse(localStorage.getItem("users")) || {};
+            const sessions = users[currentUser]?.sessions || [];
+            const historyButtons = document.getElementById("history-buttons");
+            historyButtons.innerHTML = "";
+            sessions.forEach(session => {
+                const button = document.createElement("button");
+                button.className = "history-button";
+                button.textContent = `${session.timestamp} - ${session.preview}`;
+                button.onclick = () => loadSession(session.id);
+                historyButtons.appendChild(button);
+            });
+        }
+
+        function loadSession(sessionId) {
+            currentSessionId = sessionId;
+            const users = JSON.parse(localStorage.getItem("users")) || {};
+            const session = users[currentUser].sessions.find(s => s.id === sessionId);
+            const chatOutput = document.getElementById("chat-output");
+            chatOutput.innerHTML = "";
+            if (session && session.messages) {
+                session.messages.forEach(msg => {
+                    const message = document.createElement("div");
+                    message.className = msg.class;
+                    message.innerHTML = msg.html;
+                    chatOutput.appendChild(message);
+                });
+            }
+            document.getElementById("history-container").style.display = "none";
+            document.getElementById("chat-container").style.display = "flex";
+            chatOutput.scrollTo({ top: chatOutput.scrollHeight, behavior: "smooth" });
+        }
+
+        const knowledgeBase = [
+            {
+                keywords: ["ban", "tban", "sban", "dban"],
+                response: `To ban a user<br><br>Normal ban ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>• /ban 12341234</code></pre>
+</div>
+Or reply to their message with:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/ban reply with user message</code></pre>
+</div>
+Same as /sban, /tban, /dban
+delete user message and ban user ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/dban dban not support ban with user id</code></pre>
+</div>
+Or reply to their message with:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/dban reply with user message</code></pre>
+</div>
+/sban silently ban a user ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/sban 12341234</code></pre>
+</div>
+Or reply to their message with:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/sban reply with user message</code></pre>
+</div>
+/tban [user_id] [duration]
+/tban temporary ban a user ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/tban 12341234 1h</code></pre>
+</div>
+Or reply to their message with:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/tban reply with user message</code></pre>
+</div><br><br>`
+            },
+            {
+                keywords: ["warn", "swarn", "dwarn", "rmwarn", "resetwarn", "resetallwarnings", "warnings", "warningmode", "warnlimit", "warntime"],
+                response: `To manage warnings in a group<br><br>Warn a user ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>• /warn 12341234 [reason]</code></pre>
+</div>
+Or reply to their message with:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/warn reply with user message [reason]</code></pre>
+</div>
+Silently warn a user (deletes command message) ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/swarn 12341234 [reason]</code></pre>
+</div>
+Or reply to their message with:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/swarn reply with user message [reason]</code></pre>
+</div>
+Warn and delete user’s message ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/dwarn reply with user message [reason]</code></pre>
+</div>
+Remove one warning from a user ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/rmwarn 12341234</code></pre>
+</div>
+Or reply to their message with:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/rmwarn reply with user message</code></pre>
+</div>
+Reset all warnings for a user ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/resetwarn 12341234</code></pre>
+</div>
+Or reply to their message with:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/resetwarn reply with user message</code></pre>
+</div>
+Reset all warnings in the group ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/resetallwarnings</code></pre>
+</div>
+Show warning settings ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/warnings</code></pre>
+</div>
+Set warning mode (ban, mute, kick) ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/warningmode mute</code></pre>
+</div>
+Set warning limit ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/warnlimit 3</code></pre>
+</div>
+Set warning duration or show current duration ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/warntime 1d</code></pre>
+</div>
+Check current warn time:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/warntime</code></pre>
+</div><br>
+Notes:<br>
+- Duration for /warntime can be in seconds (e.g., 30s), minutes (e.g., 30m), hours (e.g., 2h), days (e.g., 1d), weeks (e.g., 1w), months (e.g., 1mo), or years (e.g., 1y).<br>
+- Default warn limit is 3; reaching the limit triggers the set mode (ban, mute, or kick).<br>
+- Only admins can use these commands.<br>
+- Warnings expire after the set duration, if configured.<br><br>`
+            },
+            {
+                keywords: ["how are you", "kaise ho"],
+                response: `I'm fine, thanks for asking me 😊.`
+            },
+            {
+                keywords: ["hello", "hi", "hey"],
+                response: `HEY THERE HOW CAN I HELP YOU TODAY..`
+            },
+            {
+                keywords: ["admin", "promote", "demote", "adminlist", "admincache", "anonadmin", "adminerror"],
+                response: `To manage admins in a group<br><br>Promote a user to admin ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>• /promote 12341234 [title] [duration]</code></pre>
+</div>
+Or reply to their message with:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/promote reply with user message [title] [duration]</code></pre>
+</div>
+Example with title and duration:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/promote 12341234 Moderator 1h</code></pre>
+</div>
+Demote an admin ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/demote 12341234</code></pre>
+</div>
+Or reply to their message with:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/demote reply with user message</code></pre>
+</div>
+List all admins in the group ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/adminlist</code></pre>
+</div>
+Refresh admin cache (admin only) ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/admincache</code></pre>
+</div>
+Enable/disable anonymous admin mode (admin only) ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/anonadmin [on|off]</code></pre>
+</div>
+Check current anonymous admin status:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/anonadmin</code></pre>
+</div>
+Enable/disable admin error messages (admin only) ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/adminerror [on|off]</code></pre>
+</div>
+Check current admin error message status:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/adminerror</code></pre>
+</div><br>
+Notes:<br>
+- Duration for /promote can be in minutes (e.g., 30m), hours (e.g., 2h), or days (e.g., 1d).<br>
+- Custom title for /promote must be 16 characters or less.<br>
+- Only admins with promotion rights or the group owner can use /promote and /demote.<br>
+- Temporary admins are automatically demoted after the specified duration.<br><br>`
+            },
+            {
+                keywords: ["kick", "tkick", "dkick", "skick"],
+                response: `To kick a user:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>• /kick 12341234</code></pre>
+</div>
+Or reply to their message with:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/kick reply with user message</code></pre>
+</div>
+Same as /skick, /tkick, /dkick
+delete user message and kick user ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/dkick dkick not support kicking with user id</code></pre>
+</div>
+Or reply to their message with:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/dkick reply with user message</code></pre>
+</div>
+/skick silently kick a user ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/skick 12341234</code></pre>
+</div>
+Or reply to their message with:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/skick reply with user message</code></pre>
+</div>
+/tkick [user_id] [duration]
+/tkick temporary kick a user ↓
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/tkick 12341234 1h</code></pre>
+</div>
+Or reply to their message with:
+<div class="code-block">
+    <span class="language-label">command</span>
+    <pre><code>/tkick reply with user message</code></pre>
+</div><br><br>`
+            },
+            {
+                keywords: ["start", "begin"],
+                response: `To **start** a bot:
+<div class="code-block">
+    <span class="language-label">shell</span>
+    <pre><code>/start</code></pre>
+</div>
+This initializes the bot's functionality.`
+            },
+            {
+                keywords: ["help", "assist", "guide"],
+                response: `To get **help**:
+<div class="code-block">
+    <span class="language-label">shell</span>
+    <pre><code>/help</code></pre>
+</div>
+I'm here to assist with any Telegram bot command!`
+            }
+        ];
+
+        function toggleTheme() {
+            document.body.classList.toggle("dark-theme");
+            const themeToggle = document.getElementById("theme-toggle");
+            themeToggle.textContent = document.body.classList.contains("dark-theme") ? "☀️" : "🌙";
+            localStorage.setItem("theme", document.body.classList.contains("dark-theme") ? "dark" : "light");
+        }
+
+        function loadTheme() {
+            const theme = localStorage.getItem("theme");
+            if (theme === "dark") {
+                document.body.classList.add("dark-theme");
+                document.getElementById("theme-toggle").textContent = "☀️";
+            }
+        }
+
+        function getTimestamp() {
+            return new Date().toLocaleString();
+        }
+
+        function addReaction(messageElement, emoji) {
+            if (!isAuthenticated) {
+                alert("Please login to react to messages.");
+                return;
+            }
+
+            const messageId = messageElement.dataset.id || Date.now().toString();
+            messageElement.dataset.id = messageId;
+
+            const userReactionKey = `${currentUser}-${messageId}`;
+            if (userReactions.has(userReactionKey)) {
+                alert("You have already reacted to this message.");
+                return;
+            }
+
+            userReactions.set(userReactionKey, emoji);
+
+            let reactions = messageElement.querySelector(".reactions");
+            if (!reactions) {
+                reactions = document.createElement("div");
+                reactions.className = "reactions";
+                messageElement.appendChild(reactions);
+            }
+
+            const reactionSpans = reactions.querySelectorAll(".reaction");
+            reactionSpans.forEach(span => span.classList.remove("selected"));
+            const selectedReaction = reactions.querySelector(`.reaction[data-emoji="${emoji}"]`);
+            if (selectedReaction) {
+                selectedReaction.classList.add("selected");
+            }
+
+            const reactionSpan = reactions.querySelector(`.reaction[data-emoji="${emoji}"]`);
+            if (reactionSpan) {
+                const countSpan = reactionSpan.querySelector(".reaction-count");
+                let count = parseInt(countSpan.textContent) || 0;
+                countSpan.textContent = count + 1;
+            } else {
+                const reaction = document.createElement("span");
+                reaction.className = "reaction selected";
+                reaction.dataset.emoji = emoji;
+                reaction.innerHTML = `${emoji} <span class="reaction-count">1</span>`;
+                reactions.appendChild(reaction);
+            }
+
+            const feedback = document.createElement("div");
+            feedback.className = "feedback-message";
+            feedback.textContent = "Thanks for your feedback!";
+            messageElement.appendChild(feedback);
+
+            setTimeout(() => feedback.remove(), 3000);
+        }
+
+        function editMessage(messageElement) {
+            if (!isAuthenticated) {
+                alert("Please login to edit messages.");
+                return;
+            }
+            const text = messageElement.querySelector("span").textContent.replace(`${currentUser}: `, "");
+            const newText = prompt("Edit your message:", text);
+            if (newText) {
+                messageElement.querySelector("span").innerHTML = `<strong>${currentUser}:</strong> ${parseMarkdown(newText)}`;
+                const timestamp = messageElement.querySelector(".timestamp");
+                timestamp.textContent = `Edited ${getTimestamp()}`;
+            }
+        }
+
+        function showAutocomplete() {
+            const input = document.getElementById("user-input").value.toLowerCase().trim();
+            const suggestionsDiv = document.getElementById("autocomplete-suggestions");
+            suggestionsDiv.innerHTML = "";
+            suggestionsDiv.style.display = "none";
+
+            if (input.startsWith("/")) {
+                const matches = knowledgeBase.filter(entry =>
+                    entry.keywords.some(keyword => keyword.startsWith(input.slice(1)))
+                );
+                if (matches.length > 0) {
+                    suggestionsDiv.style.display = "block";
+                    matches.forEach(entry => {
+                        const suggestion = document.createElement("div");
+                        suggestion.className = "suggestion";
+                        suggestion.textContent = `/${entry.keywords[0]}`;
+                        suggestion.onclick = () => {
+                            document.getElementById("user-input").value = `/${entry.keywords[0]}`;
+                            suggestionsDiv.style.display = "none";
+                        };
+                        suggestionsDiv.appendChild(suggestion);
+                    });
+                }
+            }
+        }
+
+        function parseMarkdown(text) {
+            text = text.replace(/```(\w+)?\n([\s\S]*?)\n```/g, (match, lang, code) => {
+                const language = lang || "text";
+                return `<div class="code-block"><span class="language-label">${language}</span><pre><code>${escapeHtml(code)}</code></pre></div>`;
+            });
+            text = text.replace(/`([^`]+)`/g, '<span class="inline-code">$1</span>');
+            text = text.replace(/(?:\*\*|__)(.*?)(?:\*\*|__)/g, '<strong>$1</strong>');
+            text = text.replace(/(?:\*|_)(.*?)(?:\*|_)/g, '<em>$1</em>');
+            text = text.replace(/\n/g, '<br>');
+            return text;
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        async function typeMessage(message, element) {
+            const typingIndicator = document.getElementById("typing-indicator");
+            typingIndicator.style.display = "block";
+            await new Promise(resolve => setTimeout(resolve, 500));
+            element.innerHTML = `<strong>KIRA AI:</strong> ${message}`;
+            typingIndicator.style.display = "none";
+        }
+
+        function getResponse(userInput) {
+            const input = userInput.toLowerCase().trim();
+            if (!input) return "Please ask something!";
+
+            let bestMatch = null;
+            let maxScore = 0;
+
+            for (const entry of knowledgeBase) {
+                let score = 0;
+                for (const keyword of entry.keywords) {
+                    score += input.includes(keyword) ? 1 : 0;
+                    const regex = new RegExp(`\\b${keyword}\\b`, "i");
+                    if (regex.test(input)) {
+                        score += 2;
+                    }
+                }
+                if (score > maxScore) {
+                    maxScore = score;
+                    bestMatch = entry;
+                }
+            }
+
+            if (bestMatch) {
+                return bestMatch.response;
+            }
+
+            const availableCommands = knowledgeBase.map(entry => `/${entry.keywords[0]}`).join(", ");
+            return `Sorry, I didn't understand.<br>Try asking about commands like ${availableCommands}.`;
+        }
+
+        async function sendMessage() {
+            if (!isAuthenticated) {
+                alert("Please login to send messages.");
+                showAuthForm();
+                return;
+            }
+
+            const userInput = document.getElementById("user-input").value.trim();
+            const chatOutput = document.getElementById("chat-output");
+
+            if (userInput) {
+                const userMessage = document.createElement("div");
+                userMessage.className = "message user-message";
+                userMessage.innerHTML = `
+                    <span><strong>${currentUser}:</strong> ${parseMarkdown(userInput)}</span>
+                    <span class="timestamp">${getTimestamp()}</span>
+                    <span class="edit-button" onclick="editMessage(this.parentElement)">Edit</span>
+                `;
+                chatOutput.appendChild(userMessage);
+
+                document.getElementById("user-input").value = "";
+                document.getElementById("autocomplete-suggestions").style.display = "none";
+
+                const aiResponse = getResponse(userInput);
+                const botMessage = document.createElement("div");
+                botMessage.className = "message bot-message";
+                botMessage.innerHTML = `
+                    <span><strong>KIRA AI:</strong> ${aiResponse}</span>
+                    <span class="timestamp">${getTimestamp()}</span>
+                    <div class="reactions">
+                        <span class="reaction" onclick="addReaction(this.parentElement.parentElement, '👍')" data-emoji="👍">👍</span>
+                        <span class="reaction" onclick="addReaction(this.parentElement.parentElement, '👎')" data-emoji="👎">👎</span>
+                    </div>
+                `;
+                chatOutput.appendChild(botMessage);
+                await typeMessage(aiResponse, botMessage.querySelector("span"));
+
+                chatOutput.scrollTo({ top: chatOutput.scrollHeight, behavior: "smooth" });
+                saveCurrentSession();
+            }
+        }
+
+        function initializeChat() {
+            const users = JSON.parse(localStorage.getItem("users")) || {};
+            currentSessionId = Date.now().toString();
+            const initialMessage = document.querySelector(".bot-message");
+            if (initialMessage) {
+                initialMessage.querySelector(".timestamp").textContent = getTimestamp();
+            }
+            const savedUser = localStorage.getItem("currentUser");
+            if (savedUser && users[savedUser]) {
+                currentUser = savedUser;
+                isAuthenticated = true;
+                const lastSession = users[savedUser].sessions[users[savedUser].sessions.length - 1];
+                if (lastSession) {
+                    loadSession(lastSession.id);
+                }
+            }
+        }
+
+        document.getElementById("user-input").addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        });
+
+        window.onload = () => {
+            loadTheme();
+            if (!isAuthenticated) {
+                showAuthForm();
+            } else {
+                initializeChat();
+            }
+            document.getElementById("user-input").focus();
+        };
+    </script>
+</body>
+</html>
